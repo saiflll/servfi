@@ -14,11 +14,11 @@ import (
 )
 
 type SensorOperationalStatus struct {
-	SensorKey                   string 
-	SensorType                  string 
-	AreaID                      int   
-	SensorNo                    int   
-	DoorID                      int   
+	SensorKey                   string
+	SensorType                  string
+	AreaID                      int
+	SensorNo                    int
+	DoorID                      int
 	LastSeen                    time.Time
 	IsOffline                   bool
 	LastOfflineNotificationTime time.Time
@@ -51,7 +51,6 @@ func RegisterOrUpdateSensorStatus(sensorKey, sensorType string, areaID, sensorNo
 			DoorID:     doorID,
 			LastSeen:   timestamp,
 			IsOffline:  false,
-			
 		}
 		sensorStatusRegistry[sensorKey] = status
 		//log.Printf("Sensor %s terdaftar. Terakhir terlihat: %v", sensorKey, timestamp.Local())
@@ -84,7 +83,7 @@ func CheckAndNotifyOfflineSensors() {
 				status.IsOffline = true
 				status.LastOfflineNotificationTime = now // Catat waktu notifikasi pertama
 
-				offlineMsg := fmt.Sprintf("⚠️ **Sensor Offline**\nSensor %s (%s) tidak mengirimkan data selama %d menit.\nTerakhir terlihat: %s\n🪛 Laporkan : [📞 Call . . . ](https://facebook.com)",
+				offlineMsg := fmt.Sprintf("⚠️ **Sensor Offline**\nSensor %s (%s) tidak mengirimkan data selama %d menit.\nTerakhir terlihat: %s\n🪛 Laporkan : [📞 Call . . . ](https://wa.me/+6282221294931)",
 					getSensorFriendlyName(status), key, actualOfflineMinutes, status.LastSeen.Local().Format(time.RFC1123))
 
 				telegram.SendAlert(offlineMsg)
@@ -130,4 +129,20 @@ func StartOfflineDetectionWorker() {
 		}
 	}()
 	log.Println("Offline Scan Begin . . . .")
+}
+
+// GetSensorOperationalStatus retrieves a copy of the operational status for a given sensor key.
+// It returns the status and a boolean indicating if the sensor was found in the registry.
+// It is safe for concurrent use.
+func GetSensorOperationalStatus(sensorKey string) (SensorOperationalStatus, bool) {
+	sensorStatusRegistryMutex.Lock()
+	defer sensorStatusRegistryMutex.Unlock()
+
+	status, exists := sensorStatusRegistry[sensorKey]
+	if !exists {
+		return SensorOperationalStatus{}, false
+	}
+
+	// Return a copy to prevent race conditions from the caller modifying the returned struct.
+	return *status, true
 }

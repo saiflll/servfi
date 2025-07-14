@@ -23,7 +23,7 @@ type ThresholdLevel struct {
 // MessageConfig menyimpan template pesan untuk sebuah area.
 type MessageConfig struct {
 	AreaID           int
-	SensorType       string 
+	SensorType       string
 	UpperCriticalMsg string
 	UpperWarningMsg  string
 	LowerWarningMsg  string
@@ -46,16 +46,16 @@ var (
 	MessageConfigs  []MessageConfig
 	TempThresholds  []ThresholdConfig
 	RhThresholds    []ThresholdConfig
-	PROX_THRESHOLDS  ProxThresholdsConfig
-	PbP  = "PERINGATAN BAHAYA"
-	PwP  = "PERINGATAN"
-	KtT  = "DI ATAS AMBANG BATAS"
-	KmT  = "MENDEKATI AMBANG BATAS ATAS"
-	KmR  = "MENDEKATI AMBANG BATAS BAWAH"
-	KtR  = "DI BAWAH AMBANG BATAS"
-	IPbK = "Segera lakukan tindakan korektif."
-	IPbW = "Segera lakukan pemantauan."
-	L    = "Lokasi: {{.Location}}"
+	PROX_THRESHOLDS ProxThresholdsConfig
+	PbP             = "PERINGATAN BAHAYA"
+	PwP             = "PERINGATAN"
+	KtT             = "DI ATAS AMBANG BATAS"
+	KmT             = "MENDEKATI AMBANG BATAS ATAS"
+	KmR             = "MENDEKATI AMBANG BATAS BAWAH"
+	KtR             = "DI BAWAH AMBANG BATAS"
+	IPbK            = "Segera lakukan tindakan korektif."
+	IPbW            = "Segera lakukan pemantauan."
+	L               = "Lokasi: {{.Location}}"
 )
 
 func init() {
@@ -69,33 +69,126 @@ func init() {
 		{ID: 19, Name: "Loading Platform"},
 	}
 
-
 	MessageConfigs = []MessageConfig{
-		// Suhu
-		{AreaID: 1, SensorType: "temp", UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! (Batas: %.0f°C).\n%s\n%s"},
+		// =========================================================================
+		//                            KONFIGURASI SUHU (TEMP)
+		// =========================================================================
+
+		// AreaID: 1 (Hanya Kritis Atas)
+		{AreaID: 1, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! (Batas Atas: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		// AreaID: 2, 3, 9, 10, 11, 12, 13, 15, 19 (Lengkap: 4 Level)
 		{AreaID: 2, SensorType: "temp",
-			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas kritis: %.0f°C.\n%s\n%s",
-			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\n%s\n%s",
-			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\n%s\n%s",
-			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas kritis: %.0f°C.\n%s\n%s",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 		},
+		{AreaID: 3, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		// AreaID: 4 (Hanya Kritis Atas & Bawah)
 		{AreaID: 4, SensorType: "temp",
-			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas kritis: %.0f°C.\n%s\n%s",
-			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas kritis: %.0f°C.\n%s\n%s",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 		},
-		// Kelembaban
+		// AreaID: 7, 8, 16, 17 (Hanya Peringatan & Kritis Atas)
+		{AreaID: 7, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 8, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 9, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 10, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 11, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 12, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 13, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		// AreaID: 14 (Tanpa Peringatan Bawah)
+		{AreaID: 14, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 15, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 16, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 17, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 19, SensorType: "temp",
+			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+
+		// =========================================================================
+		//                          KONFIGURASI KELEMBABAN (RH)
+		// =========================================================================
+
+		// AreaID: 11, 12 (Tanpa Kritis Atas & Peringatan Bawah)
 		{AreaID: 11, SensorType: "rh",
-			UpperWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Maks: %.0f%%).\n%s\n%s",
-			LowerCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas Kritis Bawah: %.0f%%.\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Maks: %.0f%%).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas Kritis Bawah: %.0f%%.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 		},
+		{AreaID: 12, SensorType: "rh",
+			UpperWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Maks: %.0f%%).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas Kritis Bawah: %.0f%%.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		// AreaID: 13 & 15 (Lengkap: 4 Level)
 		{AreaID: 13, SensorType: "rh",
-			UpperCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas kritis: %.0f%%.\n%s\n%s",
-			UpperWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Maks: %.0f%%).\n%s\n%s",
-			LowerWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Min: %.0f%%).\n%s\n%s",
-			LowerCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas kritis: %.0f%%.\n%s\n%s",
+			UpperCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas Kritis Atas: %.0f%%.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Maks: %.0f%%).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Min: %.0f%%).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas Kritis Bawah: %.0f%%.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+		},
+		{AreaID: 15, SensorType: "rh",
+			UpperCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas Kritis Atas: %.0f%%.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			UpperWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Maks: %.0f%%).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Min: %.0f%%).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
+			LowerCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas Kritis Bawah: %.0f%%.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 		},
 	}
-
 
 	TempThresholds = []ThresholdConfig{
 		{AreaID: 1, SensorNo: 1, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: 10}}},
@@ -120,15 +213,15 @@ func init() {
 		{AreaID: 13, SensorNo: 2, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: 24}, UpperWarning: &ThresholdLevel{Limit: 23}, LowerWarning: &ThresholdLevel{Limit: 21}, LowerCritical: &ThresholdLevel{Limit: 20}}},
 		{AreaID: 13, SensorNo: 3, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: 24}, UpperWarning: &ThresholdLevel{Limit: 23}, LowerWarning: &ThresholdLevel{Limit: 21}, LowerCritical: &ThresholdLevel{Limit: 20}}},
 		{AreaID: 13, SensorNo: 4, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: 24}, UpperWarning: &ThresholdLevel{Limit: 23}, LowerWarning: &ThresholdLevel{Limit: 21}, LowerCritical: &ThresholdLevel{Limit: 20}}},
-		{AreaID: 14, SensorNo: 1, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41},LowerCritical: &ThresholdLevel{Limit: -44}}},
-		{AreaID: 14, SensorNo: 2, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41},LowerCritical: &ThresholdLevel{Limit: -44}}},
-		{AreaID: 14, SensorNo: 3, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41},LowerCritical: &ThresholdLevel{Limit: -44}}},
-		{AreaID: 14, SensorNo: 4, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41},LowerCritical: &ThresholdLevel{Limit: -44}}},
-		{AreaID: 14, SensorNo: 5, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41},LowerCritical: &ThresholdLevel{Limit: -44}}},
-		{AreaID: 14, SensorNo: 6, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41},LowerCritical: &ThresholdLevel{Limit: -44}}},
-		{AreaID: 14, SensorNo: 7, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41},LowerCritical: &ThresholdLevel{Limit: -44}}},
-		{AreaID: 14, SensorNo: 8, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41},LowerCritical: &ThresholdLevel{Limit: -44}}},
-		{AreaID: 14, SensorNo: 9, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41},LowerCritical: &ThresholdLevel{Limit: -44}}},
+		{AreaID: 14, SensorNo: 1, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41}, LowerCritical: &ThresholdLevel{Limit: -44}}},
+		{AreaID: 14, SensorNo: 2, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41}, LowerCritical: &ThresholdLevel{Limit: -44}}},
+		{AreaID: 14, SensorNo: 3, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41}, LowerCritical: &ThresholdLevel{Limit: -44}}},
+		{AreaID: 14, SensorNo: 4, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41}, LowerCritical: &ThresholdLevel{Limit: -44}}},
+		{AreaID: 14, SensorNo: 5, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41}, LowerCritical: &ThresholdLevel{Limit: -44}}},
+		{AreaID: 14, SensorNo: 6, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41}, LowerCritical: &ThresholdLevel{Limit: -44}}},
+		{AreaID: 14, SensorNo: 7, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41}, LowerCritical: &ThresholdLevel{Limit: -44}}},
+		{AreaID: 14, SensorNo: 8, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41}, LowerCritical: &ThresholdLevel{Limit: -44}}},
+		{AreaID: 14, SensorNo: 9, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: -40}, UpperWarning: &ThresholdLevel{Limit: -41}, LowerCritical: &ThresholdLevel{Limit: -44}}},
 		{AreaID: 15, SensorNo: 1, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: 24}, UpperWarning: &ThresholdLevel{Limit: 23}, LowerWarning: &ThresholdLevel{Limit: 21}, LowerCritical: &ThresholdLevel{Limit: 20}}},
 		{AreaID: 16, SensorNo: 1, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: 10}, UpperWarning: &ThresholdLevel{Limit: 8}}},
 		{AreaID: 16, SensorNo: 2, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: 10}, UpperWarning: &ThresholdLevel{Limit: 8}}},

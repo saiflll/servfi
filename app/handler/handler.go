@@ -14,11 +14,13 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/xuri/excelize/v2"
+
 	//"golang.org/x/crypto/bcrypt"
 
 	"IoTT/app/models"
 	"IoTT/internal/config"
 	"IoTT/internal/database"
+	internalmodels "IoTT/internal/models"
 	"IoTT/internal/worker"
 )
 
@@ -29,38 +31,38 @@ import (
 const getTempDataByAreaAndRangeQuery = `
     SELECT no, value, ts 
     FROM temp 
-    WHERE area_id = ? AND ts >= ? AND ts <= ? 
+    WHERE area_id = ? AND ts >= ? AND ts < ? 
     ORDER BY ts ASC;`
 
 const getRhDataByAreaAndRangeQuery = `
     SELECT no, value, ts 
     FROM rh 
-    WHERE area_id = ? AND ts >= ? AND ts <= ? 
+    WHERE area_id = ? AND ts >= ? AND ts < ? 
     ORDER BY ts ASC;`
 
 const getTempDataBySensorAndRangeQuery = `
     SELECT no, value, ts 
     FROM temp 
-    WHERE area_id = ? AND no = ? AND ts >= ? AND ts <= ? 
+    WHERE area_id = ? AND no = ? AND ts >= ? AND ts < ? 
     ORDER BY ts ASC;`
 
 const getRhDataBySensorAndRangeQuery = `
     SELECT no, value, ts 
     FROM rh 
-    WHERE area_id = ? AND no = ? AND ts >= ? AND ts <= ? 
+    WHERE area_id = ? AND no = ? AND ts >= ? AND ts < ? 
     ORDER BY ts ASC;`
 
 const getAreaSummaryStatsBySensorQuery = `
 -- Versi query yang diperbaiki dan stabil, placeholder diubah ke '?'
 SELECT
-    (SELECT AVG(value) FROM temp WHERE area_id = ? AND no = ? AND ts >= ? AND ts <= ?) as avg_temp,
-    (SELECT AVG(value) FROM rh   WHERE area_id = ? AND no = ? AND ts >= ? AND ts <= ?) as avg_rh,
-    (SELECT MAX(value) FROM temp WHERE area_id = ? AND no = ? AND ts >= ? AND ts <= ?) as max_temp,
-    (SELECT MIN(value) FROM temp WHERE area_id = ? AND no = ? AND ts >= ? AND ts <= ?) as min_temp,
-    (SELECT MAX(value) FROM rh   WHERE area_id = ? AND no = ? AND ts >= ? AND ts <= ?) as max_rh,
-    (SELECT MIN(value) FROM rh   WHERE area_id = ? AND no = ? AND ts >= ? AND ts <= ?) as min_rh,
-    (SELECT value FROM temp WHERE area_id = ? AND no = ? AND ts >= ? AND ts <= ? ORDER BY ts DESC LIMIT 1) as last_temp,
-    (SELECT value FROM rh   WHERE area_id = ? AND no = ? AND ts >= ? AND ts <= ? ORDER BY ts DESC LIMIT 1) as last_rh;
+    (SELECT AVG(value) FROM temp WHERE area_id = ? AND no = ? AND ts >= ? AND ts < ?) as avg_temp,
+    (SELECT AVG(value) FROM rh   WHERE area_id = ? AND no = ? AND ts >= ? AND ts < ?) as avg_rh,
+    (SELECT MAX(value) FROM temp WHERE area_id = ? AND no = ? AND ts >= ? AND ts < ?) as max_temp,
+    (SELECT MIN(value) FROM temp WHERE area_id = ? AND no = ? AND ts >= ? AND ts < ?) as min_temp,
+    (SELECT MAX(value) FROM rh   WHERE area_id = ? AND no = ? AND ts >= ? AND ts < ?) as max_rh,
+    (SELECT MIN(value) FROM rh   WHERE area_id = ? AND no = ? AND ts >= ? AND ts < ?) as min_rh,
+    (SELECT value FROM temp WHERE area_id = ? AND no = ? AND ts >= ? AND ts < ? ORDER BY ts DESC LIMIT 1) as last_temp,
+    (SELECT value FROM rh   WHERE area_id = ? AND no = ? AND ts >= ? AND ts < ? ORDER BY ts DESC LIMIT 1) as last_rh;
 `
 
 const getLatestAndPreviousSensorDataQuery = `
@@ -123,6 +125,14 @@ ORDER BY
     s.area_id, s.no;
 `
 
+const getCombinedSensorDataForExportQuery = `
+    SELECT t.ts, t.value, r.value
+    FROM temp t
+    LEFT JOIN rh r ON t.area_id = r.area_id AND t.no = r.no AND t.ts = r.ts
+    WHERE t.area_id = ? AND t.no = ? AND t.ts >= ? AND t.ts < ?
+    ORDER BY t.ts ASC;
+`
+
 // =========================================================================
 // FUNGSI HANDLER DAN HELPER
 // =========================================================================
@@ -161,7 +171,8 @@ func parseAreaAndDateRangeParams(c *fiber.Ctx) (areaID int, startDate, endDate t
 		err = fmt.Errorf("Format tanggal 'end' tidak valid. Gunakan YYYY-MM-DD.")
 		return
 	}
-	endDate = endDate.Add(24*time.Hour - 1*time.Nanosecond)
+	// Ubah endDate menjadi awal hari BERIKUTNYA agar query < (lebih kecil dari) bisa digunakan.
+	endDate = endDate.AddDate(0, 0, 1)
 	return
 }
 
@@ -226,24 +237,145 @@ func ExportSensorDataToExcel(c *fiber.Ctx) error {
 	return c.Send(buffer.Bytes())
 }
 
+func ExportSingleSensorDataToExcel(c *fiber.Ctx) error {
+	// 1. Parse dan validasi parameter dari query string
+	areaIDStr := c.Query("area_id")
+	sensorNoStr := c.Query("sensor_no")
+	startStr := c.Query("start_date")
+	endStr := c.Query("end_date")
+
+	if areaIDStr == "" || sensorNoStr == "" || startStr == "" || endStr == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Parameter tidak lengkap (area_id, sensor_no, start_date, end_date wajib ada)"})
+	}
+
+	areaID, err := parseAreaID(areaIDStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	sensorNo, err := strconv.Atoi(sensorNoStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Parameter 'sensor_no' harus angka"})
+	}
+
+	startDate, err := time.Parse("2006-01-02", startStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format 'start_date' salah, pakai YYYY-MM-DD"})
+	}
+
+	endDate, err := time.Parse("2006-01-02", endStr)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format 'end_date' salah, pakai YYYY-MM-DD"})
+	}
+	// Ubah endDate menjadi awal hari BERIKUTNYA agar query < (lebih kecil dari) bisa digunakan.
+	endDate = endDate.AddDate(0, 0, 1)
+
+	// 2. Ambil data dari database
+	db := database.GetDB()
+	if db == nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Koneksi database tidak terinisialisasi"})
+	}
+
+	rows, err := db.Query(getCombinedSensorDataForExportQuery, areaID, sensorNo, startDate, endDate)
+	if err != nil {
+		log.Printf("Error querying combined sensor data for export: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal mengambil data sensor untuk ekspor"})
+	}
+	defer rows.Close()
+
+	type CombinedDataPoint struct {
+		TS   time.Time
+		Temp sql.NullFloat64
+		RH   sql.NullFloat64
+	}
+
+	var dataPoints []CombinedDataPoint
+	for rows.Next() {
+		var dp CombinedDataPoint
+		if err := rows.Scan(&dp.TS, &dp.Temp, &dp.RH); err != nil {
+			log.Printf("Error scanning combined data row for export: %v", err)
+			continue
+		}
+		dataPoints = append(dataPoints, dp)
+	}
+	if err = rows.Err(); err != nil {
+		log.Printf("Error after iterating combined data rows for export: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membaca data sensor untuk ekspor"})
+	}
+
+	// 3. Buat file Excel
+	f := excelize.NewFile()
+	defer f.Close()
+	sheetName := fmt.Sprintf("Sensor %d Area %d", sensorNo, areaID)
+	f.NewSheet(sheetName)
+
+	f.SetCellValue(sheetName, "A1", "Timestamp")
+	f.SetCellValue(sheetName, "B1", "Temperature (°C)")
+	f.SetCellValue(sheetName, "C1", "Humidity (%%)")
+
+	for i, dp := range dataPoints {
+		row := i + 2
+		f.SetCellValue(sheetName, fmt.Sprintf("A%d", row), dp.TS.Format("2006-01-02 15:04:05"))
+		if dp.Temp.Valid {
+			f.SetCellValue(sheetName, fmt.Sprintf("B%d", row), dp.Temp.Float64)
+		}
+		if dp.RH.Valid {
+			f.SetCellValue(sheetName, fmt.Sprintf("C%d", row), dp.RH.Float64)
+		}
+	}
+
+	f.DeleteSheet("Sheet1")
+
+	// 4. Tulis ke buffer dan kirim sebagai respons
+	var buffer bytes.Buffer
+	if err := f.Write(&buffer); err != nil {
+		log.Printf("Error writing excel file to buffer: %v", err)
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membuat file Excel"})
+	}
+	fileName := fmt.Sprintf("export_sensor_%d_area_%d_%s_to_%s.xlsx", sensorNo, areaID, startDate.Format("2006-01-02"), endDate.AddDate(0, 0, -1).Format("2006-01-02"))
+	c.Set("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	c.Set("Content-Disposition", "attachment; filename="+fileName)
+	return c.Send(buffer.Bytes())
+}
+
 func parseSummaryRequestParams(c *fiber.Ctx) (startDate, endDate time.Time, err error) {
-	startStr := c.Query("start")
-	endStr := c.Query("end")
-	if startStr == "" || endStr == "" {
-		err = fmt.Errorf("Query parameter 'start' dan 'end' dibutuhkan")
+	startStr := c.Query("start", "today") // Default ke "today" jika tidak ada
+	endStr := c.Query("end", "today")     // Default ke "today" jika tidak ada
+
+	// GANTI: Menggunakan UTC secara eksplisit untuk konsistensi
+	now := time.Now().UTC()
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
+	// Parse tanggal mulai
+	if strings.ToLower(startStr) == "today" {
+		startDate = today
+	} else {
+		startDate, err = time.Parse("2006-01-02", startStr)
+		if err != nil {
+			err = fmt.Errorf("format tanggal 'start' tidak valid. Gunakan YYYY-MM-DD atau 'today'")
+			return
+		}
+	}
+
+	// Parse tanggal selesai
+	if strings.ToLower(endStr) == "today" {
+		endDate = today
+	} else {
+		endDate, err = time.Parse("2006-01-02", endStr)
+		if err != nil {
+			err = fmt.Errorf("format tanggal 'end' tidak valid. Gunakan YYYY-MM-DD atau 'today'")
+			return
+		}
+	}
+
+	// Pastikan tanggal mulai tidak setelah tanggal selesai
+	if startDate.After(endDate) {
+		err = fmt.Errorf("tanggal 'start' tidak boleh setelah tanggal 'end'")
 		return
 	}
-	startDate, err = time.Parse("2006-01-02", startStr)
-	if err != nil {
-		err = fmt.Errorf("Format tanggal 'start' tidak valid. Gunakan YYYY-MM-DD.")
-		return
-	}
-	endDate, err = time.Parse("2006-01-02", endStr)
-	if err != nil {
-		err = fmt.Errorf("Format tanggal 'end' tidak valid. Gunakan YYYY-MM-DD.")
-		return
-	}
-	endDate = endDate.Add(24*time.Hour - 1*time.Nanosecond)
+
+	// Ubah endDate menjadi awal hari BERIKUTNYA agar query < (lebih kecil dari) bisa digunakan.
+	endDate = endDate.AddDate(0, 0, 1)
 	return
 }
 
@@ -269,8 +401,8 @@ func getSetpointsFromConfig(thresholds []config.ThresholdConfig, areaID, sensorN
 const getSensorDataForTableQuery = `
     SELECT t.ts, t.value, r.value
     FROM temp t
-    LEFT JOIN rh r ON t.area_id = r.area_id AND t.no = r.no AND t.ts = r.ts
-    WHERE t.area_id = ? AND t.no = ? AND t.ts >= ? AND t.ts <= ?
+    LEFT JOIN rh r ON t.area_id = r.area_id AND t.no = r.no AND t.ts = r.ts -- Join berdasarkan timestamp yang sama
+    WHERE t.area_id = ? AND t.no = ? AND t.ts >= ? AND t.ts < ?
     ORDER BY t.ts DESC;
 `
 
@@ -296,23 +428,23 @@ func GetAreaSummaryBySensorHandler(c *fiber.Ctx) error {
 		Area        string    `json:"area"`
 		Timestamp   time.Time `json:"timestamp"`
 		Status      string    `json:"status"`
-		Temperature *float64  `json:"temperature,omitempty"`
-		Humidity    *float64  `json:"humidity,omitempty"`
+		Temperature *float64  `json:"temperature"`
+		Humidity    *float64  `json:"humidity"`
 	}
 
 	type SummaryResponse struct {
-		LastTemp   *float64   `json:"last_temp,omitempty"`
-		MinTemp    *float64   `json:"min_temp,omitempty"`
-		MaxTemp    *float64   `json:"max_temp,omitempty"`
-		AvgTemp    *float64   `json:"avg_temp,omitempty"`
-		MinSetTemp *float64   `json:"min_set_temp,omitempty"`
-		MaxSetTemp *float64   `json:"max_set_temp,omitempty"`
-		LastRH     *float64   `json:"last_rh,omitempty"`
-		MinRH      *float64   `json:"min_rh,omitempty"`
-		MaxRH      *float64   `json:"max_rh,omitempty"`
-		AvgRH      *float64   `json:"avg_rh,omitempty"`
-		MinSetRH   *float64   `json:"min_set_rh,omitempty"`
-		MaxSetRH   *float64   `json:"max_set_rh,omitempty"`
+		LastTemp   *float64   `json:"last_temp"`
+		MinTemp    *float64   `json:"min_temp"`
+		MaxTemp    *float64   `json:"max_temp"`
+		AvgTemp    *float64   `json:"avg_temp"`
+		MinSetTemp *float64   `json:"min_set_temp"`
+		MaxSetTemp *float64   `json:"max_set_temp"`
+		LastRH     *float64   `json:"last_rh"`
+		MinRH      *float64   `json:"min_rh"`
+		MaxRH      *float64   `json:"max_rh"`
+		AvgRH      *float64   `json:"avg_rh"`
+		MinSetRH   *float64   `json:"min_set_rh"`
+		MaxSetRH   *float64   `json:"max_set_rh"`
 		Table      []TableRow `json:"table"`
 	}
 
@@ -323,21 +455,6 @@ func GetAreaSummaryBySensorHandler(c *fiber.Ctx) error {
 	// 1. Ambil setpoints dari config
 	response.MinSetTemp, response.MaxSetTemp = getSetpointsFromConfig(config.TempThresholds, areaID, sensorNo)
 	response.MinSetRH, response.MaxSetRH = getSetpointsFromConfig(config.RhThresholds, areaID, sensorNo)
-
-	// Pastikan field setpoint tidak hilang dari JSON jika tidak ada di config, set ke 0
-	defaultValue := 0.0
-	if response.MinSetTemp == nil {
-		response.MinSetTemp = &defaultValue
-	}
-	if response.MaxSetTemp == nil {
-		response.MaxSetTemp = &defaultValue
-	}
-	if response.MinSetRH == nil {
-		response.MinSetRH = &defaultValue
-	}
-	if response.MaxSetRH == nil {
-		response.MaxSetRH = &defaultValue
-	}
 
 	db := database.GetDB()
 	if db == nil {
@@ -438,6 +555,11 @@ func GetDetailedAlerts(c *fiber.Ctx) error {
 	}
 	defer rows.Close()
 	var detailedAlerts []models.DetailedAlert
+
+	// GANTI: Menggunakan UTC secara eksplisit untuk konsistensi
+	now := time.Now().UTC()
+	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
+
 	for rows.Next() {
 		var (
 			areaID, sensorNo int
@@ -450,6 +572,12 @@ func GetDetailedAlerts(c *fiber.Ctx) error {
 			log.Printf("Error scanning latest sensor data row for detailed alerts: %v", err)
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal memproses data sensor untuk alert"})
 		}
+
+		// Lewati data yang timestamp-nya bukan hari ini
+		if ts.Before(startOfToday) {
+			continue
+		}
+
 		var status worker.SafetyStatus
 		if sensorType == "temp" {
 			status = worker.EvaluateTemp(areaID, sensorNo, currentValue)
@@ -561,7 +689,8 @@ func GetChartDataHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format 'end_date' salah, pakai YYYY-MM-DD"})
 	}
-	endDate = endDate.Add(24*time.Hour - 1*time.Nanosecond)
+	// Ubah endDate menjadi awal hari BERIKUTNYA agar query < (lebih kecil dari) bisa digunakan.
+	endDate = endDate.AddDate(0, 0, 1)
 	var query string
 	if dataType == "temperature" {
 		query = getTempDataBySensorAndRangeQuery
@@ -640,7 +769,21 @@ func GetSensorStatuses(c *fiber.Ctx) error {
 			SensorNo: sensorNo,
 		}
 
-		if tempValue.Valid && tempTS.Valid {
+		// --- Cek Status Suhu (Temp) ---
+		tempKey := fmt.Sprintf("temp-%d-%d", areaID, sensorNo)
+		tempOpStatus, tempFound := internalmodels.GetSensorOperationalStatus(tempKey)
+
+		if tempFound && tempOpStatus.IsOffline {
+			// Jika sensor terdeteksi offline, prioritaskan status ini
+			status.Temp = &models.SensorValueStatus{
+				Status: "offline",
+				TS:     tempOpStatus.LastSeen,
+			}
+			if tempValue.Valid {
+				status.Temp.Value = tempValue.Float64
+			}
+		} else if tempValue.Valid && tempTS.Valid {
+			// Jika online dan ada data, evaluasi seperti biasa
 			evalStatus := worker.EvaluateTemp(areaID, sensorNo, tempValue.Float64)
 			status.Temp = &models.SensorValueStatus{
 				Value:  tempValue.Float64,
@@ -649,7 +792,19 @@ func GetSensorStatuses(c *fiber.Ctx) error {
 			}
 		}
 
-		if rhValue.Valid && rhTS.Valid {
+		// --- Cek Status Kelembaban (RH) ---
+		rhKey := fmt.Sprintf("rh-%d-%d", areaID, sensorNo)
+		rhOpStatus, rhFound := internalmodels.GetSensorOperationalStatus(rhKey)
+
+		if rhFound && rhOpStatus.IsOffline {
+			status.RH = &models.SensorValueStatus{
+				Status: "offline",
+				TS:     rhOpStatus.LastSeen,
+			}
+			if rhValue.Valid {
+				status.RH.Value = rhValue.Float64
+			}
+		} else if rhValue.Valid && rhTS.Valid {
 			evalStatus := worker.EvaluateRh(areaID, sensorNo, rhValue.Float64)
 			status.RH = &models.SensorValueStatus{
 				Value:  rhValue.Float64,
@@ -657,7 +812,6 @@ func GetSensorStatuses(c *fiber.Ctx) error {
 				TS:     rhTS.Time,
 			}
 		}
-
 		statuses = append(statuses, status)
 	}
 

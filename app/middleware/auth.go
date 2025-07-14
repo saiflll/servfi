@@ -5,39 +5,43 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gofiber/fiber/v2" // GANTI: Menggunakan Fiber
+	"github.com/gofiber/fiber/v2"
 	"github.com/golang-jwt/jwt/v5"
 )
 
 // AuthMiddleware adalah middleware untuk memvalidasi token otentikasi di Fiber.
-// GANTI: Tipe return diubah dari gin.HandlerFunc menjadi fiber.Handler
+// Middleware ini akan mencari token dari:
+// 1. Header `Authorization: Bearer <token>`
+// 2. Query parameter `?token=<token>`
 func AuthMiddleware() fiber.Handler {
-	// GANTI: Signature fungsi diubah menjadi func(c *fiber.Ctx) error
 	return func(c *fiber.Ctx) error {
-		// GANTI: c.GetHeader() menjadi c.Get()
+		var tokenString string
+
+		// Coba dapatkan token dari header 'Authorization'
 		authHeader := c.Get("Authorization")
-		if authHeader == "" {
-			// GANTI: c.AbortWithStatusJSON menjadi return c.Status().JSON()
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			tokenString = strings.TrimPrefix(authHeader, "Bearer ")
+		}
+
+		// Jika tidak ada di header, coba dapatkan dari query parameter 'token'
+		if tokenString == "" {
+			tokenString = c.Query("token")
+		}
+
+		// Jika token masih tidak ditemukan, kembalikan error
+		if tokenString == "" {
 			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Authorization header tidak ditemukan",
+				"error": "Token otentikasi tidak ditemukan di header atau query parameter",
 			})
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-				"error": "Format Authorization header tidak valid. Gunakan 'Bearer <token>'",
-			})
-		}
-
-		tokenString := parts[1]
 		jwtSecret := os.Getenv("JWT_SECRET_KEY")
 
 		// Mem-parsing dan memvalidasi token
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			// Pastikan algoritma penandatanganan adalah yang kita harapkan (HS256)
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+				return nil, fmt.Errorf("metode penandatanganan tidak terduga: %v", token.Header["alg"])
 			}
 			return []byte(jwtSecret), nil
 		})
@@ -47,11 +51,9 @@ func AuthMiddleware() fiber.Handler {
 		}
 
 		// (Opsional) Menyimpan claims dari token ke context agar bisa diakses oleh handler berikutnya
-		claims, ok := token.Claims.(jwt.MapClaims)
-		if ok {
+		if claims, ok := token.Claims.(jwt.MapClaims); ok {
 			c.Locals("user_claims", claims)
 		}
-		// GANTI: c.Next() menjadi return c.Next() untuk melanjutkan ke handler berikutnya.
 		return c.Next()
 	}
 }

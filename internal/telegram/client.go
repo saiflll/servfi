@@ -36,13 +36,10 @@ func SendAlert(messageText string) {
 	go func(msgTxt string) {
 		msg := tgbotapi.NewMessage(ChatID, msgTxt)
 		msg.ParseMode = tgbotapi.ModeMarkdown
+		msg.DisableWebPagePreview = true // Menonaktifkan pratinjau link
 
 		if _, err := bot.Send(msg); err != nil {
 			log.Printf("Error mengirim pesan Telegram: %v", err)
 		}
 	}(messageText)
 }
-
-// HandleWebhook DIHAPUS dari file ini.
-// Fungsinya sudah dipindahkan ke `internal/handler/handler.go`
-// dengan nama `HandleTelegramWebhook` agar semua handler terpusat.
