@@ -6,12 +6,12 @@ import (
 	"log"
 	"os"
 
-	_ "modernc.org/sqlite" // GANTI: Menggunakan driver SQLite3
+	_ "modernc.org/sqlite" 
 
-	"IoTT/internal/seed" // Asumsi path ini tetap sama
+	"IoTT/internal/seed" 
 )
 
-// Variabel global tetap sama
+
 var DB *sql.DB
 var (
 	AreaNames     map[int]string
@@ -19,16 +19,16 @@ var (
 	DoorToAreaMap map[int]int
 )
 
-// InitDB diubah untuk terhubung ke file SQLite dari .env
+
 func InitDB() {
-	// MENGGUNAKAN .env yang sudah di-load di main.go
+	
 	dbPath := os.Getenv("DB_PATH")
 	if dbPath == "" {
 		log.Fatal("❌ Error: DB_PATH tidak ditemukan di environment.")
 	}
 
 	var err error
-	// GANTI: Membuka koneksi ke file SQLite
+	
 	DB, err = sql.Open("sqlite", dbPath)
 	if err != nil {
 		log.Fatalf("❌ Error saat membuka koneksi ke database SQLite: %v", err)
@@ -41,7 +41,7 @@ func InitDB() {
 
 	log.Println("✅ Berhasil terhubung ke database SQLite.")
 
-	// Menjalankan semua langkah inisialisasi
+	
 	createTables()
 	log.Println("⚙️  Memulai proses seeding database...")
 	seed.SeedData(DB)
@@ -49,9 +49,9 @@ func InitDB() {
 	LoadLookupData()
 }
 
-// createTables disesuaikan untuk sintaks SQLite
+
 func createTables() {
-	// GANTI: Sintaks `SERIAL PRIMARY KEY` diubah menjadi `INTEGER PRIMARY KEY AUTOINCREMENT`
+	
 	commands := []string{
 		`CREATE TABLE IF NOT EXISTS ck (
             ck_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -109,7 +109,7 @@ func createTables() {
 	log.Println("✅ Struktur tabel database berhasil diperiksa/dibuat.")
 }
 
-// LoadLookupData tidak perlu diubah, karena menggunakan query SQL standar
+
 func LoadLookupData() {
 	AreaNames = make(map[int]string)
 	DoorNames = make(map[int]string)
@@ -158,7 +158,7 @@ func LoadLookupData() {
 	log.Printf("✔️ Berhasil memuat %d nama area dan %d nama pintu ke lookup map.", len(AreaNames), len(DoorNames))
 }
 
-// Helper functions tidak perlu diubah
+
 func GetDB() *sql.DB {
 	return DB
 }
@@ -187,8 +187,8 @@ func GetDoorInfo(doorID int) (doorName string, areaID int, areaName string) {
 	return doorName, areaID, areaName
 }
 
-// CloseDB adalah fungsi baru untuk menutup koneksi database dengan rapi.
-// Panggil dengan `defer database.CloseDB()` di `main.go`.
+
+
 func CloseDB() {
 	if DB != nil {
 		DB.Close()

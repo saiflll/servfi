@@ -6,9 +6,9 @@ import (
 	"log"
 )
 
-// SeedData diubah untuk menggunakan sintaks SQLite.
+
 func SeedData(DB *sql.DB) {
-	// GANTI: Sintaks diubah dari "ON CONFLICT" menjadi "INSERT OR IGNORE"
+	
 	ckSeedCommands := []string{
 		"INSERT OR IGNORE INTO ck (ck_id, name) VALUES (1, 'CK 1');",
 		"INSERT OR IGNORE INTO ck (ck_id, name) VALUES (2, 'CK 2');",
@@ -50,14 +50,14 @@ func SeedData(DB *sql.DB) {
 		"INSERT OR IGNORE INTO door (door_id, name, area_id) VALUES (10, 'Area Chilled Room', 10);",
 	}
 
-	// Hash untuk password "admin123"
-	// HASH DIPERBAIKI: Hash bcrypt yang valid memiliki 60 karakter.
+	
+	
 	adminPasswordHash := "$2a$10$gT9Wz.yL4nLdG5jV.sC.u.jF3gH2kL5mN1oPqR7sT9uV0wXyZ.G"
 	userSeedCommands := []string{
 		fmt.Sprintf("INSERT OR IGNORE INTO users (user_id, username, password_hash) VALUES (1, 'admin', '%s');", adminPasswordHash),
 	}
 
-	// Logika di bawah ini tidak perlu diubah sama sekali.
+	
 	seedCommandList := []struct {
 		name     string
 		commands []string
@@ -69,7 +69,7 @@ func SeedData(DB *sql.DB) {
 	}
 
 	for _, seedGroup := range seedCommandList {
-		// log.Printf("Seeding initial data for %s...", seedGroup.name)
+		
 		tx, err := DB.Begin()
 		if err != nil {
 			log.Printf("Error starting transaction for %s seeding: %v", seedGroup.name, err)
@@ -87,7 +87,7 @@ func SeedData(DB *sql.DB) {
 		if err != nil {
 			log.Printf("Error committing transaction for %s seeding: %v", seedGroup.name, err)
 		} else {
-			// log.Printf("Initial %s data successfully seeded (if not already present).", seedGroup.name)
+			
 		}
 	nextGroup:
 	}

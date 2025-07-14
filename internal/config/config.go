@@ -1,26 +1,22 @@
 package config
 
-// Area mendefinisikan sebuah lokasi fisik.
 type Area struct {
 	ID   int
 	Name string
 }
 
-// Threshold merepresentasikan satu set level ambang batas untuk sebuah sensor.
 type Threshold struct {
 	UpperCritical *ThresholdLevel
 	UpperWarning  *ThresholdLevel
 	LowerWarning  *ThresholdLevel
 	LowerCritical *ThresholdLevel
-	Type          string // Untuk tipe khusus seperti "ambient"
+	Type          string
 }
 
-// ThresholdLevel sekarang hanya mendefinisikan batas numerik.
 type ThresholdLevel struct {
 	Limit float64
 }
 
-// MessageConfig menyimpan template pesan untuk sebuah area.
 type MessageConfig struct {
 	AreaID           int
 	SensorType       string
@@ -30,7 +26,6 @@ type MessageConfig struct {
 	LowerCriticalMsg string
 }
 
-// ThresholdConfig mengaitkan sebuah Area dan nomor sensor dengan konfigurasinya.
 type ThresholdConfig struct {
 	AreaID   int
 	SensorNo int
@@ -70,15 +65,11 @@ func init() {
 	}
 
 	MessageConfigs = []MessageConfig{
-		// =========================================================================
-		//                            KONFIGURASI SUHU (TEMP)
-		// =========================================================================
 
-		// AreaID: 1 (Hanya Kritis Atas)
 		{AreaID: 1, SensorType: "temp",
 			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! (Batas Atas: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 		},
-		// AreaID: 2, 3, 9, 10, 11, 12, 13, 15, 19 (Lengkap: 4 Level)
+
 		{AreaID: 2, SensorType: "temp",
 			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
@@ -96,7 +87,7 @@ func init() {
 			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 		},
-		// AreaID: 7, 8, 16, 17 (Hanya Peringatan & Kritis Atas)
+
 		{AreaID: 7, SensorType: "temp",
 			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
@@ -135,7 +126,7 @@ func init() {
 			LowerWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Min: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 			LowerCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Bawah: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 		},
-		// AreaID: 14 (Tanpa Peringatan Bawah)
+
 		{AreaID: 14, SensorType: "temp",
 			UpperCriticalMsg: "(%s)\n%s Suhu: %.1f°C %s! Batas Kritis Atas: %.0f°C.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 			UpperWarningMsg:  "(%s)\n%s Suhu: %.1f°C %s (Normal Maks: %.0f°C).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
@@ -175,7 +166,7 @@ func init() {
 			UpperWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Maks: %.0f%%).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 			LowerCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas Kritis Bawah: %.0f%%.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 		},
-		// AreaID: 13 & 15 (Lengkap: 4 Level)
+
 		{AreaID: 13, SensorType: "rh",
 			UpperCriticalMsg: "(%s)\n%s Kelembaban: %.1f%% %s! Batas Kritis Atas: %.0f%%.\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
 			UpperWarningMsg:  "(%s)\n%s Kelembaban: %.1f%% %s (Normal Maks: %.0f%%).\nHubungi: [call](https://wa.me/+6282221294931)\n%s\n%s",
@@ -235,9 +226,6 @@ func init() {
 		{AreaID: 19, SensorNo: 2, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: 12}, UpperWarning: &ThresholdLevel{Limit: 11}, LowerWarning: &ThresholdLevel{Limit: 9}, LowerCritical: &ThresholdLevel{Limit: 8}}},
 	}
 
-	// =========================================================================
-	// KONFIGURASI AMBANG BATAS KELEMBABAN (RH_THRESHOLDS)
-	// =========================================================================
 	RhThresholds = []ThresholdConfig{
 		{AreaID: 11, SensorNo: 1, Config: Threshold{UpperWarning: &ThresholdLevel{Limit: 80}, LowerCritical: &ThresholdLevel{Limit: 70}}},
 		{AreaID: 12, SensorNo: 1, Config: Threshold{UpperWarning: &ThresholdLevel{Limit: 80}, LowerCritical: &ThresholdLevel{Limit: 70}}},
@@ -249,9 +237,6 @@ func init() {
 		{AreaID: 15, SensorNo: 2, Config: Threshold{UpperCritical: &ThresholdLevel{Limit: 60}, UpperWarning: &ThresholdLevel{Limit: 55}, LowerWarning: &ThresholdLevel{Limit: 45}, LowerCritical: &ThresholdLevel{Limit: 40}}},
 	}
 
-	// =========================================================================
-	// KONFIGURASI PROXIMITY
-	// =========================================================================
 	PROX_THRESHOLDS = ProxThresholdsConfig{
 		MaxIdleMinutes: 10,
 	}

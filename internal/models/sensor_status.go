@@ -3,8 +3,6 @@ package models
 import (
 	"fmt"
 	"log"
-
-	//"strings"
 	"sync"
 	"time"
 
@@ -53,11 +51,11 @@ func RegisterOrUpdateSensorStatus(sensorKey, sensorType string, areaID, sensorNo
 			IsOffline:  false,
 		}
 		sensorStatusRegistry[sensorKey] = status
-		//log.Printf("Sensor %s terdaftar. Terakhir terlihat: %v", sensorKey, timestamp.Local())
+
 	} else {
-		status.LastSeen = timestamp // Selalu update waktu terakhir terlihat
+		status.LastSeen = timestamp
 		if status.IsOffline {
-			//log.Printf("Sensor %s (%s) kembali online. Data baru pada: %v", getSensorFriendlyName(status), sensorKey, timestamp.Local().Format(time.RFC1123))
+
 			onlineMsg := fmt.Sprintf("✅ **Sensor Online**\nSensor %s (%s) kembali mengirimkan data.\nData terakhir pada: %s", getSensorFriendlyName(status), sensorKey, timestamp.Local().Format(time.RFC1123))
 			telegram.SendAlert(onlineMsg)
 			status.IsOffline = false
@@ -75,27 +73,25 @@ func CheckAndNotifyOfflineSensors() {
 	for key, status := range sensorStatusRegistry {
 		currentActualOfflineDuration := now.Sub(status.LastSeen)
 
-		if currentActualOfflineDuration > offlineThresholdDuration { // Sensor telah melewati ambang batas offline
-			if !status.IsOffline { // Ini adalah transisi pertama ke status offline (sejak terakhir online/terdaftar)
+		if currentActualOfflineDuration > offlineThresholdDuration {
+			if !status.IsOffline {
 				actualOfflineMinutes := int(currentActualOfflineDuration.Minutes())
-				//log.Printf("Sensor %s (%s) terdeteksi offline. Durasi: %d menit. Terakhir terlihat: %v", getSensorFriendlyName(status), key, actualOfflineMinutes, status.LastSeen.Local().Format(time.RFC1123))
 
 				status.IsOffline = true
-				status.LastOfflineNotificationTime = now // Catat waktu notifikasi pertama
+				status.LastOfflineNotificationTime = now
 
 				offlineMsg := fmt.Sprintf("⚠️ **Sensor Offline**\nSensor %s (%s) tidak mengirimkan data selama %d menit.\nTerakhir terlihat: %s\n🪛 Laporkan : [📞 Call . . . ](https://wa.me/+6282221294931)",
 					getSensorFriendlyName(status), key, actualOfflineMinutes, status.LastSeen.Local().Format(time.RFC1123))
 
 				telegram.SendAlert(offlineMsg)
-			} else { // Sensor sudah dalam status offline, periksa untuk pengingat
+			} else {
 				if now.Sub(status.LastOfflineNotificationTime) >= OfflineReminderInterval {
 					totalOfflineMinutes := int(currentActualOfflineDuration.Minutes())
-					//log.Printf("Mengirim pengingat offline untuk sensor %s (%s). Total durasi offline: %d menit. Notifikasi sebelumnya: %v", getSensorFriendlyName(status), key, totalOfflineMinutes, status.LastOfflineNotificationTime.Local().Format(time.RFC1123))
 
 					reminderMsg := fmt.Sprintf("🕒 **Sensor Masih Offline (Pengingat)**\nSensor %s (%s) masih tidak mengirimkan data.\nTotal durasi offline: %d menit.\nNotifikasi terakhir dikirim %s.\nTerakhir terlihat: %s\n🪛 Laporkan : [📞 Call . . . ](https://facebook.com)",
 						getSensorFriendlyName(status), key, totalOfflineMinutes, status.LastOfflineNotificationTime.Local().Format(time.RFC1123), status.LastSeen.Local().Format(time.RFC1123))
 					telegram.SendAlert(reminderMsg)
-					status.LastOfflineNotificationTime = now // Perbarui waktu untuk pengingat berikutnya
+					status.LastOfflineNotificationTime = now
 				}
 			}
 		}
@@ -120,20 +116,17 @@ func getSensorFriendlyName(status *SensorOperationalStatus) string {
 }
 
 func StartOfflineDetectionWorker() {
-	ticker := time.NewTicker(1 * time.Minute) // Periksa setiap 1 menit
+	ticker := time.NewTicker(1 * time.Minute)
 	go func() {
 		for {
-			<-ticker.C // Tunggu tick berikutnya
-			//log.Println("Inspection")
+			<-ticker.C
+
 			CheckAndNotifyOfflineSensors()
 		}
 	}()
 	log.Println("Offline Scan Begin . . . .")
 }
 
-// GetSensorOperationalStatus retrieves a copy of the operational status for a given sensor key.
-// It returns the status and a boolean indicating if the sensor was found in the registry.
-// It is safe for concurrent use.
 func GetSensorOperationalStatus(sensorKey string) (SensorOperationalStatus, bool) {
 	sensorStatusRegistryMutex.Lock()
 	defer sensorStatusRegistryMutex.Unlock()
@@ -143,6 +136,5 @@ func GetSensorOperationalStatus(sensorKey string) (SensorOperationalStatus, bool
 		return SensorOperationalStatus{}, false
 	}
 
-	// Return a copy to prevent race conditions from the caller modifying the returned struct.
 	return *status, true
 }

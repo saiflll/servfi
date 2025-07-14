@@ -15,7 +15,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/xuri/excelize/v2"
 
-	//"golang.org/x/crypto/bcrypt"
+	
 
 	"IoTT/app/models"
 	"IoTT/internal/config"
@@ -24,9 +24,9 @@ import (
 	"IoTT/internal/worker"
 )
 
-// =========================================================================
-// KONSTANTA QUERY SQL (Digabungkan dari query.go)
-// =========================================================================
+
+
+
 
 const getTempDataByAreaAndRangeQuery = `
     SELECT no, value, ts 
@@ -133,9 +133,9 @@ const getCombinedSensorDataForExportQuery = `
     ORDER BY t.ts ASC;
 `
 
-// =========================================================================
-// FUNGSI HANDLER DAN HELPER
-// =========================================================================
+
+
+
 
 func parseAreaID(param string) (int, error) {
 	if !strings.HasPrefix(param, "s0_") {
@@ -171,7 +171,7 @@ func parseAreaAndDateRangeParams(c *fiber.Ctx) (areaID int, startDate, endDate t
 		err = fmt.Errorf("Format tanggal 'end' tidak valid. Gunakan YYYY-MM-DD.")
 		return
 	}
-	// Ubah endDate menjadi awal hari BERIKUTNYA agar query < (lebih kecil dari) bisa digunakan.
+	
 	endDate = endDate.AddDate(0, 0, 1)
 	return
 }
@@ -238,7 +238,7 @@ func ExportSensorDataToExcel(c *fiber.Ctx) error {
 }
 
 func ExportSingleSensorDataToExcel(c *fiber.Ctx) error {
-	// 1. Parse dan validasi parameter dari query string
+	
 	areaIDStr := c.Query("area_id")
 	sensorNoStr := c.Query("sensor_no")
 	startStr := c.Query("start_date")
@@ -267,10 +267,10 @@ func ExportSingleSensorDataToExcel(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format 'end_date' salah, pakai YYYY-MM-DD"})
 	}
-	// Ubah endDate menjadi awal hari BERIKUTNYA agar query < (lebih kecil dari) bisa digunakan.
+	
 	endDate = endDate.AddDate(0, 0, 1)
 
-	// 2. Ambil data dari database
+	
 	db := database.GetDB()
 	if db == nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Koneksi database tidak terinisialisasi"})
@@ -303,7 +303,7 @@ func ExportSingleSensorDataToExcel(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal membaca data sensor untuk ekspor"})
 	}
 
-	// 3. Buat file Excel
+	
 	f := excelize.NewFile()
 	defer f.Close()
 	sheetName := fmt.Sprintf("Sensor %d Area %d", sensorNo, areaID)
@@ -326,7 +326,7 @@ func ExportSingleSensorDataToExcel(c *fiber.Ctx) error {
 
 	f.DeleteSheet("Sheet1")
 
-	// 4. Tulis ke buffer dan kirim sebagai respons
+	
 	var buffer bytes.Buffer
 	if err := f.Write(&buffer); err != nil {
 		log.Printf("Error writing excel file to buffer: %v", err)
@@ -339,14 +339,14 @@ func ExportSingleSensorDataToExcel(c *fiber.Ctx) error {
 }
 
 func parseSummaryRequestParams(c *fiber.Ctx) (startDate, endDate time.Time, err error) {
-	startStr := c.Query("start", "today") // Default ke "today" jika tidak ada
-	endStr := c.Query("end", "today")     // Default ke "today" jika tidak ada
+	startStr := c.Query("start", "today") 
+	endStr := c.Query("end", "today")     
 
-	// GANTI: Menggunakan UTC secara eksplisit untuk konsistensi
+	
 	now := time.Now().UTC()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 
-	// Parse tanggal mulai
+	
 	if strings.ToLower(startStr) == "today" {
 		startDate = today
 	} else {
@@ -357,7 +357,7 @@ func parseSummaryRequestParams(c *fiber.Ctx) (startDate, endDate time.Time, err 
 		}
 	}
 
-	// Parse tanggal selesai
+	
 	if strings.ToLower(endStr) == "today" {
 		endDate = today
 	} else {
@@ -368,13 +368,13 @@ func parseSummaryRequestParams(c *fiber.Ctx) (startDate, endDate time.Time, err 
 		}
 	}
 
-	// Pastikan tanggal mulai tidak setelah tanggal selesai
+	
 	if startDate.After(endDate) {
 		err = fmt.Errorf("tanggal 'start' tidak boleh setelah tanggal 'end'")
 		return
 	}
 
-	// Ubah endDate menjadi awal hari BERIKUTNYA agar query < (lebih kecil dari) bisa digunakan.
+	
 	endDate = endDate.AddDate(0, 0, 1)
 	return
 }
@@ -422,7 +422,7 @@ func GetAreaSummaryBySensorHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Nomor sensor (no) tidak valid"})
 	}
 
-	// Definisikan struct untuk response JSON yang baru
+	
 	type TableRow struct {
 		TitikSensor string    `json:"titik_sensor"`
 		Area        string    `json:"area"`
@@ -449,10 +449,10 @@ func GetAreaSummaryBySensorHandler(c *fiber.Ctx) error {
 	}
 
 	response := SummaryResponse{
-		Table: []TableRow{}, // Inisialisasi slice agar tidak null di JSON
+		Table: []TableRow{}, 
 	}
 
-	// 1. Ambil setpoints dari config
+	
 	response.MinSetTemp, response.MaxSetTemp = getSetpointsFromConfig(config.TempThresholds, areaID, sensorNo)
 	response.MinSetRH, response.MaxSetRH = getSetpointsFromConfig(config.RhThresholds, areaID, sensorNo)
 
@@ -461,27 +461,27 @@ func GetAreaSummaryBySensorHandler(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Koneksi database tidak terinisialisasi"})
 	}
 
-	// 2. Ambil data statistik (avg, min, max, last)
+	
 	var avgTemp, avgRH, maxTemp, minTemp, maxRH, minRH, lastTemp, lastRH sql.NullFloat64
 	err = db.QueryRow(getAreaSummaryStatsBySensorQuery,
-		areaID, sensorNo, startDate, endDate, // avg_temp
-		areaID, sensorNo, startDate, endDate, // avg_rh
-		areaID, sensorNo, startDate, endDate, // max_temp
-		areaID, sensorNo, startDate, endDate, // min_temp
-		areaID, sensorNo, startDate, endDate, // max_rh (baru)
-		areaID, sensorNo, startDate, endDate, // min_rh (baru)
-		areaID, sensorNo, startDate, endDate, // last_temp
-		areaID, sensorNo, startDate, endDate, // last_rh
+		areaID, sensorNo, startDate, endDate, 
+		areaID, sensorNo, startDate, endDate, 
+		areaID, sensorNo, startDate, endDate, 
+		areaID, sensorNo, startDate, endDate, 
+		areaID, sensorNo, startDate, endDate, 
+		areaID, sensorNo, startDate, endDate, 
+		areaID, sensorNo, startDate, endDate, 
+		areaID, sensorNo, startDate, endDate, 
 	).Scan(
 		&avgTemp, &avgRH, &maxTemp, &minTemp,
-		&maxRH, &minRH, // variabel scan baru
+		&maxRH, &minRH, 
 		&lastTemp, &lastRH)
 	if err != nil && err != sql.ErrNoRows {
 		log.Printf("Error querying area summary stats for area %d sensor %d: %v", areaID, sensorNo, err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal mengambil statistik area"})
 	}
 
-	// Isi statistik ke struct response
+	
 	if avgTemp.Valid {
 		roundedAvg := math.Round(avgTemp.Float64*100) / 100
 		response.AvgTemp = &roundedAvg
@@ -509,7 +509,7 @@ func GetAreaSummaryBySensorHandler(c *fiber.Ctx) error {
 		response.LastRH = &lastRH.Float64
 	}
 
-	// 3. Ambil data detail untuk tabel
+	
 	rows, err := db.Query(getSensorDataForTableQuery, areaID, sensorNo, startDate, endDate)
 	if err != nil {
 		log.Printf("Error querying table data for area %d sensor %d: %v", areaID, sensorNo, err)
@@ -523,13 +523,13 @@ func GetAreaSummaryBySensorHandler(c *fiber.Ctx) error {
 		var tempVal, rhVal sql.NullFloat64
 		if err := rows.Scan(&ts, &tempVal, &rhVal); err != nil {
 			log.Printf("Error scanning table data row: %v", err)
-			continue // Lanjut ke baris berikutnya jika ada error
+			continue 
 		}
 		row := TableRow{
 			TitikSensor: fmt.Sprintf("Sensor T/H %02d", sensorNo),
 			Area:        areaName,
 			Timestamp:   ts,
-			Status:      "running", // Sesuai permintaan
+			Status:      "running", 
 		}
 		if tempVal.Valid {
 			row.Temperature = &tempVal.Float64
@@ -556,7 +556,7 @@ func GetDetailedAlerts(c *fiber.Ctx) error {
 	defer rows.Close()
 	var detailedAlerts []models.DetailedAlert
 
-	// GANTI: Menggunakan UTC secara eksplisit untuk konsistensi
+	
 	now := time.Now().UTC()
 	startOfToday := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 
@@ -573,7 +573,7 @@ func GetDetailedAlerts(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Gagal memproses data sensor untuk alert"})
 		}
 
-		// Lewati data yang timestamp-nya bukan hari ini
+		
 		if ts.Before(startOfToday) {
 			continue
 		}
@@ -618,31 +618,31 @@ func Login(c *fiber.Ctx) error {
 
 	var userID int
 
-	// =========================================================================
-	// LOGIN HARDCODE (TIDAK AMAN - HANYA UNTUK DEVELOPMENT)
-	// =========================================================================
-	// 1. Cek kredensial secara langsung tanpa database dan bcrypt
+	
+	
+	
+	
 	if req.Username == "admin" && req.Password == "admin123" {
-		userID = 1 // Hardcode user ID untuk admin
+		userID = 1 
 	} else if req.Username == "su" && req.Password == "sus" {
-		userID = 2 // Hardcode user ID untuk su
+		userID = 2 
 	} else {
-		// Jika tidak ada yang cocok, kembalikan error
+		
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Username atau password salah"})
 	}
 
-	// 2. Buat JSON Web Token (JWT)
+	
 	jwtSecret := os.Getenv("JWT_SECRET_KEY")
 	if jwtSecret == "" {
 		log.Println("FATAL: JWT_SECRET_KEY tidak diatur di .env")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Konfigurasi server tidak lengkap"})
 	}
 
-	// Membuat claims (data di dalam token)
+	
 	claims := jwt.MapClaims{
 		"user_id":  userID,
 		"username": req.Username,
-		"exp":      time.Now().Add(time.Hour * 72).Unix(), // Token berlaku selama 3 hari
+		"exp":      time.Now().Add(time.Hour * 72).Unix(), 
 		"iat":      time.Now().Unix(),
 	}
 
@@ -689,7 +689,7 @@ func GetChartDataHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Format 'end_date' salah, pakai YYYY-MM-DD"})
 	}
-	// Ubah endDate menjadi awal hari BERIKUTNYA agar query < (lebih kecil dari) bisa digunakan.
+	
 	endDate = endDate.AddDate(0, 0, 1)
 	var query string
 	if dataType == "temperature" {
@@ -769,12 +769,12 @@ func GetSensorStatuses(c *fiber.Ctx) error {
 			SensorNo: sensorNo,
 		}
 
-		// --- Cek Status Suhu (Temp) ---
+		
 		tempKey := fmt.Sprintf("temp-%d-%d", areaID, sensorNo)
 		tempOpStatus, tempFound := internalmodels.GetSensorOperationalStatus(tempKey)
 
 		if tempFound && tempOpStatus.IsOffline {
-			// Jika sensor terdeteksi offline, prioritaskan status ini
+			
 			status.Temp = &models.SensorValueStatus{
 				Status: "offline",
 				TS:     tempOpStatus.LastSeen,
@@ -783,7 +783,7 @@ func GetSensorStatuses(c *fiber.Ctx) error {
 				status.Temp.Value = tempValue.Float64
 			}
 		} else if tempValue.Valid && tempTS.Valid {
-			// Jika online dan ada data, evaluasi seperti biasa
+			
 			evalStatus := worker.EvaluateTemp(areaID, sensorNo, tempValue.Float64)
 			status.Temp = &models.SensorValueStatus{
 				Value:  tempValue.Float64,
@@ -792,7 +792,7 @@ func GetSensorStatuses(c *fiber.Ctx) error {
 			}
 		}
 
-		// --- Cek Status Kelembaban (RH) ---
+		
 		rhKey := fmt.Sprintf("rh-%d-%d", areaID, sensorNo)
 		rhOpStatus, rhFound := internalmodels.GetSensorOperationalStatus(rhKey)
 

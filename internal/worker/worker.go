@@ -7,14 +7,14 @@ import (
 	"strconv"
 	"strings"
 
-	// "github.com/lib/pq" // HAPUS: Tidak digunakan lagi
+	
 
 	"IoTT/internal/config"
 )
 
-// InsertTemp diubah untuk menggunakan placeholder '?' yang lebih umum.
+
 func InsertTemp(db *sql.DB, areaID int, no int, value float64, ts string) error {
-	// GANTI: Placeholder $1 menjadi ?
+	
 	_, err := db.Exec("INSERT INTO temp (value, area_id, no, ts) VALUES (?, ?, ?, ?)",
 		value, areaID, no, ts)
 	if err != nil {
@@ -31,29 +31,29 @@ type TempBatchData struct {
 	TS     string
 }
 
-// BatchInsertTemp diubah total untuk menggunakan transaksi standar, bukan pq.CopyIn.
+
 func BatchInsertTemp(tx *sql.Tx, data []TempBatchData) error {
 	if len(data) == 0 {
 		return nil
 	}
-	// GANTI: Menggunakan statement INSERT standar
+	
 	stmt, err := tx.Prepare("INSERT INTO temp (value, area_id, no, ts) VALUES (?, ?, ?, ?)")
 	if err != nil {
 		return fmt.Errorf("error preparing statement: %w", err)
 	}
-	defer stmt.Close() // Pastikan statement ditutup
+	defer stmt.Close() 
 
 	for _, d := range data {
 		if _, err := stmt.Exec(d.Value, d.AreaID, d.No, d.TS); err != nil {
-			// Tidak perlu close manual di sini karena ada defer
+			
 			return fmt.Errorf("error executing statement for temp data: %w", err)
 		}
 	}
 
-	return nil // Commit akan dilakukan oleh pemanggil
+	return nil 
 }
 
-// InsertRh diubah untuk menggunakan placeholder '?'
+
 func InsertRh(db *sql.DB, areaID int, no int, value float64, ts string) error {
 	_, err := db.Exec("INSERT INTO rh (value, area_id, no, ts) VALUES (?, ?, ?, ?)",
 		value, areaID, no, ts)
@@ -71,7 +71,7 @@ type RhBatchData struct {
 	TS     string
 }
 
-// BatchInsertRh diubah total untuk menggunakan transaksi standar.
+
 func BatchInsertRh(tx *sql.Tx, data []RhBatchData) error {
 	if len(data) == 0 {
 		return nil
@@ -91,7 +91,7 @@ func BatchInsertRh(tx *sql.Tx, data []RhBatchData) error {
 	return nil
 }
 
-// InsertProx diubah untuk menggunakan placeholder '?'
+
 func InsertProx(db *sql.DB, doorID int, value int, ts string) error {
 	_, err := db.Exec("INSERT INTO prox (value, door_id, ts) VALUES (?, ?, ?)",
 		value, doorID, ts)
@@ -108,7 +108,7 @@ type ProxBatchData struct {
 	TS     string
 }
 
-// BatchInsertProx diubah total untuk menggunakan transaksi standar.
+
 func BatchInsertProx(tx *sql.Tx, data []ProxBatchData) error {
 	if len(data) == 0 {
 		return nil
@@ -128,9 +128,9 @@ func BatchInsertProx(tx *sql.Tx, data []ProxBatchData) error {
 	return nil
 }
 
-// =========================================================================
-// TIDAK ADA PERUBAHAN PADA LOGIKA EVALUASI DAN UTILITAS DI BAWAH INI
-// =========================================================================
+
+
+
 
 type SafetyStatus struct {
 	IsAlert   bool
