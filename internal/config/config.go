@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 type Area struct {
 	ID   int
 	Name string
@@ -42,6 +44,7 @@ var (
 	TempThresholds  []ThresholdConfig
 	RhThresholds    []ThresholdConfig
 	PROX_THRESHOLDS ProxThresholdsConfig
+	WIBLocation     *time.Location
 	PbP             = "PERINGATAN BAHAYA"
 	PwP             = "PERINGATAN"
 	KtT             = "DI ATAS AMBANG BATAS"
@@ -54,6 +57,8 @@ var (
 )
 
 func init() {
+	WIBLocation = time.FixedZone("WIB", 7*60*60)
+
 	Areas = []Area{
 		{ID: 1, Name: "Repacking Meat & Pawn"}, {ID: 2, Name: "Meat/Pawn Storage"}, {ID: 3, Name: "Chili/Mushroom Storage"},
 		{ID: 4, Name: "Frozen Chili & Mushroom"}, {ID: 5, Name: "Ambient WH"}, {ID: 6, Name: "Packing Storage"},

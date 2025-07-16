@@ -67,7 +67,7 @@ func RegisterOrUpdateSensorStatus(sensorKey, sensorType string, areaID, sensorNo
 func CheckAndNotifyOfflineSensors() {
 	sensorStatusRegistryMutex.Lock()
 	defer sensorStatusRegistryMutex.Unlock()
-	now := time.Now().UTC()
+	now := time.Now().In(config.WIBLocation)
 	offlineThresholdDuration := time.Duration(config.PROX_THRESHOLDS.MaxIdleMinutes) * time.Minute
 
 	for key, status := range sensorStatusRegistry {

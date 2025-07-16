@@ -6,22 +6,20 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gofiber/fiber/v2" 
+	"github.com/gofiber/fiber/v2"
 
+	"IoTT/internal/config"
 	"IoTT/internal/database"
 	"IoTT/internal/models"
 	"IoTT/internal/telegram"
 	"IoTT/internal/worker"
-
 )
 
-
-
 func HandleSensorData(c *fiber.Ctx) error {
-	
+
 	var payloads []models.SensorPayload
 	if err := c.BodyParser(&payloads); err != nil {
-		
+
 		var singlePayload models.SensorPayload
 		if errSingle := c.BodyParser(&singlePayload); errSingle != nil {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -45,13 +43,12 @@ func HandleSensorData(c *fiber.Ctx) error {
 		})
 	}
 
-	
 	tx, err := db.Begin()
 	if err != nil {
 		log.Printf("Error starting database transaction: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to start transaction"})
 	}
-	
+
 	defer tx.Rollback()
 
 	var tempsToBatch []worker.TempBatchData
@@ -60,7 +57,7 @@ func HandleSensorData(c *fiber.Ctx) error {
 	processedItemCount := 0
 
 	for _, p := range payloads {
-		sensorNoVal := 1 
+		sensorNoVal := 1
 		if p.No != nil {
 			sensorNoVal = *p.No
 		}
@@ -77,9 +74,9 @@ func HandleSensorData(c *fiber.Ctx) error {
 		var tsVal string
 		if p.TS != nil && *p.TS != "" {
 			tsVal = *p.TS
-			parsedTS, _ = time.Parse(time.RFC3339Nano, tsVal) 
+			parsedTS, _ = time.Parse(time.RFC3339Nano, tsVal)
 		} else {
-			parsedTS = time.Now().UTC()
+			parsedTS = time.Now().In(config.WIBLocation)
 			tsVal = parsedTS.Format(time.RFC3339Nano)
 		}
 
@@ -104,19 +101,19 @@ func HandleSensorData(c *fiber.Ctx) error {
 	}
 
 	var wg sync.WaitGroup
-	
+
 	errs := make(chan error, 3)
 
 	if len(tempsToBatch) > 0 {
 		wg.Add(1)
 		go func(data []worker.TempBatchData) {
 			defer wg.Done()
-			
+
 			if err := worker.BatchInsertTemp(tx, data); err != nil {
 				errs <- fmt.Errorf("gagal batch insert temp: %w", err)
-				return 
+				return
 			}
-			
+
 			for _, d := range data {
 				safetyStatus := worker.EvaluateTemp(d.AreaID, d.No, d.Value)
 				if safetyStatus.IsAlert && safetyStatus.Message != "" {
@@ -130,12 +127,12 @@ func HandleSensorData(c *fiber.Ctx) error {
 		wg.Add(1)
 		go func(data []worker.RhBatchData) {
 			defer wg.Done()
-			
+
 			if err := worker.BatchInsertRh(tx, data); err != nil {
 				errs <- fmt.Errorf("gagal batch insert rh: %w", err)
-				return 
+				return
 			}
-			
+
 			for _, d := range data {
 				safetyStatus := worker.EvaluateRh(d.AreaID, d.No, d.Value)
 				if safetyStatus.IsAlert && safetyStatus.Message != "" {
@@ -149,7 +146,7 @@ func HandleSensorData(c *fiber.Ctx) error {
 		wg.Add(1)
 		go func(data []worker.ProxBatchData) {
 			defer wg.Done()
-			
+
 			if err := worker.BatchInsertProx(tx, data); err != nil {
 				errs <- fmt.Errorf("gagal batch insert prox: %w", err)
 			}
@@ -157,9 +154,8 @@ func HandleSensorData(c *fiber.Ctx) error {
 	}
 
 	wg.Wait()
-	close(errs) 
+	close(errs)
 
-	
 	var errorMessages []string
 	for err := range errs {
 		log.Printf("Error selama pemrosesan data sensor: %v", err)
@@ -167,7 +163,7 @@ func HandleSensorData(c *fiber.Ctx) error {
 	}
 
 	if len(errorMessages) > 0 {
-		
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Terjadi kesalahan saat menyimpan sebagian atau seluruh data.",
@@ -175,7 +171,6 @@ func HandleSensorData(c *fiber.Ctx) error {
 		})
 	}
 
-	
 	if err := tx.Commit(); err != nil {
 		log.Printf("Error committing transaction: %v", err)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -190,10 +185,9 @@ func HandleSensorData(c *fiber.Ctx) error {
 	})
 }
 
-
 func HandleTelegramWebhook(c *fiber.Ctx) error {
 	var update interface{}
-	
+
 	if err := c.BodyParser(&update); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
@@ -203,6 +197,5 @@ func HandleTelegramWebhook(c *fiber.Ctx) error {
 
 	log.Printf("Received Telegram update: %+v", update)
 
-	
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "ok"})
 }
